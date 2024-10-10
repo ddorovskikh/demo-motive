@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  @font-face {
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 20px;
+    color: #191919;
+  }
+  @font-face {
+    font-family: 'Involve';
+    src: local("Involve"),
+      url("./fonts/Involve/fonts/Involve-VF.ttf") format("truetype");
+    font-weight: 400;
+    font-size: 17.28px;
+    line-height: 22.98px;
+    color: #191919;
+  }
+  @font-face {
+    font-family: 'BOWLER', sans-serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 34.72px;
+    line-height: 38.19px;
+    color: #191919;
+  }
+
+  body {
+    @apply bg-amber-50;
+  }
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', Involve,
+    monospace;
+}
+
+.text {
+  font-family: Involve;
+  font-weight: 400;
+  font-size: 17.28px;
+  line-height: 22.98px;
+}
+
+.title {
+  font-family: 'BOWLER';
+  font-size: 34.72px;
+  line-height: 38.19px;
+}
+
+.text-top-menu {  
+  font-family: Involve;
+  font-size: 20.72px;
+  font-weight: 600;
+  line-height: 27.55px;
+  color: #BB8850;
+}
