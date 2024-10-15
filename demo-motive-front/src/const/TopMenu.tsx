@@ -1,0 +1,61 @@
+import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ArrowOn, ArrowOff,
+  ManGo, ManForward, ManReverse, ManFollow, ManLook, ManLearn, ManStop,
+  NumbersNull, NumbersOne, NumbersTwo, NumbersThree, NumbersFour, NumbersFive,
+  NumbersSix, NumbersSeven, NumbersEight, NumbersNine,
+  FaceCreate, FaceCry, FaceOver, FaceDiscord, FaceForward, FaceDie,
+  HammerNail, HammerRusty, HammerExclude, HammerSlogan, HammerTrouble, HammerNew,
+  HammerKnock, HammerBlowAway, TickYes, TickNo } from '../icons';
+
+export const topMenuItems: any = {
+  tick: [
+    { label: 'Да', icon: <TickYes /> },
+    { label: 'Нет', icon: <TickNo /> },
+  ],
+  arrow: [
+    { label: 'Вверх', icon: <ArrowUp /> },
+    { label: 'Вниз', icon: <ArrowDown /> },
+    { label: 'Налево', icon: <ArrowLeft /> },
+    { label: 'Направо', icon: <ArrowRight /> },
+    { label: 'Включи', icon: <ArrowOn /> },
+    { label: 'Выключи', icon: <ArrowOff /> },
+  ],
+  man: [
+    { label: 'Стоп', icon: <ManStop /> },
+    { label: 'Иди', icon: <ManGo /> },
+    { label: 'Вперед', icon: <ManForward /> },
+    { label: 'Назад', icon: <ManReverse /> },
+    { label: 'Следуй', icon: <ManFollow /> },
+    { label: 'Наблюдай', icon: <ManLook /> },
+    { label: 'Изучай', icon: <ManLearn /> },
+  ],
+  numbers: [
+    { label: 'Ноль', icon: <NumbersNull /> },
+    { label: 'Один', icon: <NumbersOne /> },
+    { label: 'Два', icon: <NumbersTwo /> },
+    { label: 'Три', icon: <NumbersThree /> },
+    { label: 'Четыре', icon: <NumbersFour /> },
+    { label: 'Пять', icon: <NumbersFive /> },
+    { label: 'Шесть', icon: <NumbersSix /> },
+    { label: 'Семь', icon: <NumbersSeven /> },
+    { label: 'Восемь', icon: <NumbersEight /> },
+    { label: 'Девять', icon: <NumbersNine /> },
+  ],
+  face: [
+    { label: 'Создай', icon: <FaceCreate /> },
+    { label: 'Зарыдай', icon: <FaceCry /> },
+    { label: 'Сверх', icon: <FaceOver /> },
+    { label: 'Разлад', icon: <FaceDiscord /> },
+    { label: 'Вперед', icon: <FaceForward /> },
+    { label: 'Гибнет', icon: <FaceDie /> },
+  ],
+  hammer: [
+    { label: 'Гвозди', icon: <HammerNail /> },
+    { label: 'Ржавее', icon: <HammerRusty /> },
+    { label: 'Исключи', icon: <HammerExclude /> },
+    { label: 'Девиз', icon: <HammerSlogan /> },
+    { label: 'Беда', icon: <HammerTrouble /> },
+    { label: 'Новее', icon: <HammerNew /> },
+    { label: 'Стучи', icon: <HammerKnock /> },
+    { label: 'Сдуй', icon: <HammerBlowAway /> },
+  ]
+}

@@ -1,5 +1,4 @@
-import { FC, useState } from 'react';
-import { YesIcon } from '../icons';
+import { FC } from 'react';
 import TopMenuButton from './TopMenuButton';
 
 interface ICategoryItem {
@@ -17,12 +16,12 @@ const TopMenu: FC<ITopMenuProps> = (props) => {
       <div className='flex gap-8'>
       {props.items && props.items.map((item: any) => 
         <TopMenuButton
+          key={item.label}
           label={item.label}
           icon={item.icon}
         />
       )}
       </div>
-      {/*<button> <YesIcon /> </button>*/} {/* по клику запускается аудио */}
     </div>
   );
 }

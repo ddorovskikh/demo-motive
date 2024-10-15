@@ -18,6 +18,7 @@ from websockets.exceptions import ConnectionClosedError
 import numpy as np
 from typing import List
 import json
+import pynvml
 
 import websockets
 
@@ -62,44 +63,48 @@ def get_gpu_info():
             datas.append(gpu_data)
         return datas
 
+def get_gpu_info_2():
+    device_count = pynvml.nvmlDeviceGetCount()
+    datas = []
+    for i in range(device_count):
+        gpu_data = {}
+        handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+        power_in_mW = pynvml.nvmlDeviceGetPowerUsage(handle)
+        gpu_data["power"] = power_in_mW
+        datas.append(gpu_data)
+    return datas
+
 def get_power():
     while True:
         p_data = float(get_gpu_info()[0]["power"].replace(" W",""))
 
-wp = Worker_power()
+#wp = Worker_power()
 
-power_thread = Thread(target = get_power)
-power_thread.start()
-print(power_thread.is_alive())
+#power_thread = Thread(target = get_power)
+#power_thread.start()
+#print(power_thread.is_alive())
 
 @app.websocket("/wsx")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    power_buff = []
+    send_buff = []
     while True:
         t = datetime.datetime.now().time()
-        #print(wp.p_data)
+        h, m, s = str(t).split(":");
+        seconds = (float(h) * 60 * 60) + (float(m) * 60) + float(s);
         power = get_gpu_info()[0]['power'].replace(" W","")
         print(power)
-        power_buff.append({'power': power, 'time': str(t)})
-        print(power_buff)
-        if (len(power_buff) == 10):
-            try:
-                '''
-                if t.second % 5 == 0:
-                    print("Sending the time!")
-                    await websocket.send_text(str(t))
-                    await asyncio.sleep(1)
-                '''
-                print("Sending gpu power!")
-                #await websocket.send_json({'power': power, 'time': str(t)})
-                await websocket.send_text(json.dumps(power_buff))
-                await asyncio.sleep(1)
-                power_buff = []
-            except ConnectionClosedError:
-                print("Client disconnected.")
-                power_buff = []
-                break
+        #send_buff.append({'power': power, 'time': str(t)})
+        #if (len(send_buff) == 100):
+        try:
+            await websocket.send_json({'power': float(power), 'time': seconds})
+            #await websocket.send_text(json.dumps(send_buff))
+            await asyncio.sleep(0.01)
+            send_buff = []
+        except ConnectionClosedError:
+            print("Client disconnected.")
+            send_buff = []
+            break
 
 
 '''
