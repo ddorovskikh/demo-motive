@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from .powerdata_gpu import Worker_power
 
 from subprocess import Popen, PIPE
@@ -78,33 +78,43 @@ def get_power():
     while True:
         p_data = float(get_gpu_info()[0]["power"].replace(" W",""))
 
-#wp = Worker_power()
+# Constants
+CHUNK_DURATION = 0.025  # 25ms
+SAMPLE_RATE = 16000  # Should match the sample rate in the Dash app
+CHUNK_SIZE = int(CHUNK_DURATION * SAMPLE_RATE)
 
-#power_thread = Thread(target = get_power)
-#power_thread.start()
-#print(power_thread.is_alive())
+current_audio_command = None
+current_chunk = None
 
-@app.websocket("/wsx")
-async def websocket_endpoint(websocket: WebSocket):
+@app.websocket("/wsx/{channel}")
+async def websocket_endpoint(websocket: WebSocket, channel: str):
     await websocket.accept()
-    send_buff = []
-    while True:
-        t = datetime.datetime.now().time()
-        h, m, s = str(t).split(":");
-        seconds = (float(h) * 60 * 60) + (float(m) * 60) + float(s);
-        power = get_gpu_info()[0]['power'].replace(" W","")
-        print(power)
-        #send_buff.append({'power': power, 'time': str(t)})
-        #if (len(send_buff) == 100):
-        try:
-            await websocket.send_json({'power': float(power), 'time': seconds})
-            #await websocket.send_text(json.dumps(send_buff))
-            await asyncio.sleep(0.01)
-            send_buff = []
-        except ConnectionClosedError:
-            print("Client disconnected.")
-            send_buff = []
-            break
+    match channel:
+        case 'power':
+            while True:
+                t = datetime.datetime.now().time()
+                h, m, s = str(t).split(":");
+                seconds = (float(h) * 60 * 60) + (float(m) * 60) + float(s);
+                power = get_gpu_info()[0]['power'].replace(" W","")
+                try:
+                    await websocket.send_json({'power': float(power), 'time': seconds})
+                    await asyncio.sleep(0.01)
+                except ConnectionClosedError:
+                    print("Client disconnected.")
+                    break
+        case 'audio':
+            while True:
+                chunk = np.random.random(CHUNK_SIZE) * 0.01 - 0.005
+                #print(chunk)
+                if current_audio_command and current_audio_command.is_playing:
+                    command_chunk = current_audio_command.audio_data[current_audio_command.shift:current_audio_command.shift + CHUNK_SIZE]
+                    current_audio_command.shift += CHUNK_SIZE
+                    if current_audio_command.shift >= current_audio_command.length_samples - 1:
+                        current_audio_command.is_playing = False
+                    chunk[:len(command_chunk)] += command_chunk
+                    chunk = np.clip(chunk, -1, 1)
+                await websocket.send(chunk.astype(np.float32).tobytes())
+                await asyncio.sleep(CHUNK_DURATION)
 
 
 '''
@@ -136,3 +146,31 @@ async def websocket_endpoint(websocket: WebSocket):
         #data = 'xcvbxnvb'
         #await websocket.send_text(f"Message text was: {data}")
 '''
+
+COMMANDS_CLASSES = ["yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go",
+                    "backward", "forward", "follow", "learn", "visual",
+                    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+                    "create", "cry", "over", "discord", "harm", "dies", "nails", "rustier",
+                    "exclude", "motto", "grief", "newer", "knock", "blow off"]
+
+@app.post("/play_command")
+async def play_command(class_data: dict) -> dict:
+    class_id = class_data['class_id']
+    #command_playing_class = COMMANDS_CLASSES[class_id]
+    print(class_id)
+    '''
+    command_audio_file = random.choice(os.listdir(SOUNDS_DIR / command_playing_class))
+    try:
+        command_audio_data, _ = librosa.load(SOUNDS_DIR / command_playing_class / command_audio_file, sr=SAMPLE_RATE)
+    except:
+        raise HTTPException(status_code=400, detail="Wrong audio class")
+    current_audio_command = CurrentAudioCommand(timestamp=datetime.timestamp(datetime.now()),
+                                                is_playing=True,
+                                                file_path=SOUNDS_DIR / command_playing_class / command_audio_file,
+                                                audio_data=command_audio_data,
+                                                length_samples=len(command_audio_data))
+    '''
+    return {
+        "timestamp": str(datetime.datetime.now().time()),
+        "length_samples": 5,
+    }
