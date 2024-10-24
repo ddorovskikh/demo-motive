@@ -9,7 +9,7 @@ interface ITopMenuButton {
 
 const TopMenuButton: FC<ITopMenuButton> = (props) => {
   const clickHandler = async () => {
-    await fetch('http://127.0.0.1:8000/play_command', {
+    await fetch('http://127.0.0.1:8008/play_command', {
       method: 'POST',
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ class_id: props.id }),
