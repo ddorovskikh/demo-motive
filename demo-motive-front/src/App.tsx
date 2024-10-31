@@ -1,16 +1,44 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis } from 'recharts';
 import { Line as Line2 } from 'react-chartjs-2';
 import './App.css';
 import LeftMenu from './components/LeftMenu';
 import TopMenu from './components/TopMenu';
+import AudioChart from './components/AudioChart';
 import { topMenuItems } from './const/TopMenu';
 import useWebSocket, { ReadyState } from "react-use-websocket";
 import { AudioVisualizer } from 'react-audio-visualize';
 //import { Visualizer } from 'react-sound-visualizer';
 import ReactPlayer from 'react-player'
 import { useVoiceVisualizer, VoiceVisualizer } from 'react-voice-visualizer';
+import WaveSurfer from 'wavesurfer.js'
+import Wavesurfer from '@wavesurfer/react';
+import { useCanvas } from 'react-canvas-typescript';
 
+import { Chart, registerables } from 'chart.js';
+import { arrayBuffer } from 'stream/consumers';
+Chart.register(...registerables);
+
+
+const BarChart: React.FC<{ data: number[] }> = ({ data }) => {
+  const canvasRef = useCanvas({
+      draw: (ctx: any, frameCount: any) => {
+          const width = ctx.canvas.width;
+          const height = ctx.canvas.height;
+          ctx.clearRect(0, 0, width, height); // Clear the canvas
+
+          const barWidth = width / data.length;
+          data.forEach((value, index) => {
+              const barHeight = (value / Math.max(...data)) * height; // Normalize bar height
+              ctx.fillStyle = '#3498db';
+              ctx.fillRect(index * barWidth, height - barHeight, barWidth - 5, barHeight); // Draw each bar
+          });
+      },
+      contextType: '2d'
+  });
+
+  return <canvas ref={canvasRef} width={500} height={300} />;
+};
 
 interface IGpuInfo{
   time: number,
@@ -55,6 +83,7 @@ export default function App() {
 
   const [amplitudeData, setAmplitudeData] = useState<number[]>([]); // Данные амплитуды для графика
 
+
   useEffect(() => {
     referedStateGpuPower.current = readyStateGpuPower;
   }, [readyStateGpuPower]);
@@ -80,85 +109,62 @@ export default function App() {
       }
     }
   }, [referedStateGpuPower, gpuData]);
-  
-  const [blob, setBlob] = useState<any>();
-  const [audioData2, setAudioData2] = useState<Float32Array | null>(null);
-  //const [src, setSrc] = useState<any>();
-  //const [error, setError] = useState<any>();
 
-  //const src = useObjectUrl(audioData?.data.text().then((data: any) => data));
   useEffect(() => {
     if (!audioData?.data) return;
     if (referedStateAudio.current === ReadyState.OPEN) {
-      //console.log(audioData?.data.stream(), audioData?.data.text())
-      //audioData?.data.text().then((data: any) => console.log(data))
-      //console.log((audioData?.data.arrayBuffer().then((data: any) => console.log(data))))
-      console.log(audioData.data)
-
-      /*
-      audioData?.data.text().then((data: any) => {
-        const bytes = new Uint8Array(data);
-        const blob2 = new Blob([bytes], {type: "application/pdf"});
-        setBlob(bytes);
-        setPreloadedAudioBlob(data);
-      })
-      */
-      //const byteArray = new Uint8Array(audioData?.data.arrayBuffer());
-      //const blob = new Blob([JSON.parse(audioData.data)], { type: "audio/mp3" });
-      //setBlob(blob)
-
-      //const url = URL.createObjectURL(audioData?.data)
-      //console.log(blob.arrayBuffer())
-      //setSrc(src);
-      //const bytes = new Uint8Array(audioData?.data.bytes());
-      //const arr = new Uint8Array(audioData?.data.arrayBuffer());
-      //console.log(audioData?.data.arrayBuffer(), arr)
-      //setBytes(arr);
     }
   }, [referedStateAudio, audioData]);
 
+  const [audio, setAudio] = useState<any>([]);
+  const [time, setTime] = useState<number>(0);
+  const [audioBuffer, setAudioBuffer] = useState<any>([]);
+
+  const reverseArr = () => {
+    let output: any[] = [];
+    for (let i = 0; i < 6400; i += 1) {
+      output.push(i);
+    }
+    return output.reverse();
+  }
+  
+  const refDataListener = useRef(undefined);
 
   useEffect(() => {
     if (audioData !== null) {
-        const byteArray = new Uint8Array(audioData.data); // Преобразовать данные из сообщения
-        const floatArray = new Float32Array(byteArray.buffer);
-        setAudioData2(floatArray);
+        const amplitude: any[] = [];
 
-        const amplitude: number[] = [];
+        audioData.data.arrayBuffer().then((data: any) => {
+          const byteArray = new Uint8Array(data);
 
-        // Преобразование массива байт в амплитуду
-        for (let i = 0; i < byteArray.length; i += 4) {
+          for (let i = 0; i < byteArray.length; i += 40) {
             // Чтение 32-битных значений и нормализация
             const sample = new Float32Array(byteArray.buffer, i, 1)[0]; // Чтение Float32
-            amplitude.push(sample);
-        }
+            amplitude.push({data: sample, time: time});
+            //setTime((prev: any) => prev < 6400 ? +1 : prev);
+            setTime(+1);
+          }
+          console.log(amplitude.length) //== 400
+          //setAmplitudeData(amplitude)
 
-        setAmplitudeData((prevData) => [...prevData, ...amplitude]); // Обновляем состояние
+          if (amplitudeData.length < 3200) { // 2 sec
+            startTransition(() => {
+              setAmplitudeData([...amplitudeData, ...amplitude]);
+            });
+            //setAmplitudeData([...amplitudeData, ...amplitude]); // Обновляем состояние
+            //setAudio([...audio, {audio: amplitude, time: time}]);
+          } else {
+            startTransition(() => {
+              setAmplitudeData([...amplitudeData.slice(40), ...amplitude]);
+            });
+            //setAmplitudeData([...amplitudeData.slice(40), ...amplitude]);
+            //setAudio([...audio.slice(amplitude.length), {audio: amplitude, time: time}]);
+          }
+          
+          
+        })
     }
-}, [audioData]);
-
-const chartData = {
-  labels: amplitudeData.map((_, index) => index), // временные метки по индексу данных амплитуды
-  datasets: [
-      {
-          label: 'Amplitude',
-          data: amplitudeData,
-          fill: false,
-          borderColor: 'rgba(75,192,192,1)',
-          tension: 0.1,
-      },
-  ],
-};
-
-  useEffect(() => {
-    if (!error) return;
-
-    console.log(error);
-}, [error]);
-
-  const visualizerRef = useRef<HTMLCanvasElement>(null)
-  //audioData?//.then((data: any) => {console.log(data) })
-  //audioData?.data.text().then((data: any) => console.log(data.blob()))
+  }, [refDataListener, referedStateAudio, audioData]);
 
   return (
     <div className="h-screen bg-amber-50">
@@ -186,11 +192,24 @@ const chartData = {
               )}
               */}
               {/*
-              <div>
-                <h2>Audio Amplitude Visualization</h2>
-                <Line2 data={chartData} options={{ responsive: true }} />
-              </div>
-              */}
+              <Wavesurfer
+                  onReady={handleReady}
+                  waveColor="violet"
+                  progressColor="purple"
+                  height={100}
+              />*/}
+              <h2>Audio Amplitude Visualization</h2>
+              {/*<Line2 data={chartData} options={{ responsive: true }} />*/}
+              {/*<ResponsiveContainer width="99%" height={150}>
+                <LineChart data={amplitudeData} >
+                  <XAxis tickLine={false} tick={false} dataKey="time" />
+                  <YAxis domain={[-0.01, 0.01]} />
+                  <Line type="monotone" dataKey="data" dot={false} stroke="blue" yAxisId={0} />
+                </LineChart>
+              </ResponsiveContainer>*/}
+              
+              <AudioChart audioData={audioData} />
+              
 
             {/*{audioData && src && (<audio controls {...{src}} /> ) }*/}
             {/* Visualizer audio={new MediaStream(audioData?.data.text().then((data: any) => data))}> 

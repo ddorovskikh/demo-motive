@@ -93,8 +93,8 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
         case 'power':
             while True:
                 t = datetime.datetime.now().time()
-                h, m, s = str(t).split(":");
-                seconds = (float(h) * 60 * 60) + (float(m) * 60) + float(s);
+                h, m, s = str(t).split(":")
+                seconds = (float(h) * 60 * 60) + (float(m) * 60) + float(s)
                 power = get_gpu_info()[0]['power'].replace(" W","")
                 try:
                     await websocket.send_json({'power': float(power), 'time': seconds})
