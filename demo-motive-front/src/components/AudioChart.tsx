@@ -1,129 +1,190 @@
 import { useEffect, useId, useMemo, useRef, useState, startTransition } from 'react';
-import { lightningChart } from '@lightningchart/lcjs';
-import { useCanvas } from 'react-canvas-typescript';
-
-/*
-const Waveform: React.FC<{ data: Float32Array }> = ({ data }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [offset, setOffset] = useState(0); // Offset for moving the waveform
-
-  useEffect(() => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const width = canvas.width;
-      const height = canvas.height;
-
-      ctx.clearRect(0, 0, width, height); // Clear the canvas
-
-      ctx.beginPath();
-      const sliceWidth = (width * 1.0) / data.length; // Width of each slice
-      let x = offset;
-
-      for (let i = 0; i < data.length; i++) {
-          const v = data[i] * 0.5; // Scale value to fit in canvas
-          const y = (v + 1) * height / 2; // Convert to y coordinate
-          ctx.lineTo(x, y);
-          x += sliceWidth;
-      }
-
-      ctx.lineTo(width + offset, height / 2);
-      ctx.strokeStyle = '#3498db';
-      ctx.stroke();
-  }, [data, offset]);
-
-  useEffect(() => {
-      const intervalId = setInterval(() => {
-          setOffset((prevOffset) => (prevOffset - (800 / (4 * 1000 / 25))) % 800); // Move left over time
-      }, 25); // Update every 25ms
-
-      return () => clearInterval(intervalId); // Cleanup on unmount
-  }, []);
-
-  return <canvas ref={canvasRef} width={100} height={50} />;
-};
-*/
 
 const AudioChart: React.FC<any> = (props) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [data, setData] = useState<number[]>([]);
-  const maxDataPoints = 6400; // Total number of points (4 seconds at 25ms intervals)
+  const [data, setData] = useState<any[]>([]);
+  const maxDataPoints = 19200; // Total number of points (12 seconds at 25ms intervals)
+  const [speechRange, setSpeechRange] = useState<any>();
+  const [countSamples, setCountSamples] = useState<number>(0);
+  const [lenSamplesToNextLine, setLenSamplesToNextLine] = useState<any>();
+  const [step, setStep] = useState<any>();
+
+  var count = 0;
+  var check: any = null;
 
   useEffect(() => {
     if (props.audioData === null) return;
-    //const interval = setInterval(() => {
-        // Simulate receiving new data (replace this with actual data fetching)
-        const amplitude: any[] = [];
-        
-        props.audioData.data.arrayBuffer().then((data: any) => {
-          const byteArray = new Uint8Array(data);
 
-          for (let i = 0; i < byteArray.length; i += 40) {
-            // Чтение 32-битных значений и нормализация
-            const sample = new Float32Array(byteArray.buffer, i, 1)[0]; // Чтение Float32
-            amplitude.push(sample * 20);
-            //setTime(+1);
-          }
-          setData(prevData => {
-            const updatedData = [...prevData, ...amplitude];
-            if (updatedData.length > maxDataPoints) {
-                updatedData.splice(0, 40); // Remove the oldest point to maintain the length
-            }
-            return updatedData;
-          })
-          
-          
-        })
-        /*
-        const newDataPoint = Math.random() * 2 - 1; // Random value between -1 and 1
-        setData(prevData => {
-            const updatedData = [...prevData, newDataPoint];
-            if (updatedData.length > maxDataPoints) {
-                updatedData.shift(); // Remove the oldest point to maintain the length
-            }
-            return updatedData;
-        });
-        */
-    //}, 25); // Update every 25ms
+    const amplitude: any[] = [];
 
-    //return () => clearInterval(interval); // Cleanup on unmount
-  }, [props.audioData]);
+    if (typeof step === 'number') {
+      setStep((prev: any) => prev - 1);
+    }
+    
+    props.audioData.data.arrayBuffer().then((dataAudio: any) => {
+      const byteArray = new Uint8Array(dataAudio);
 
-  const minY = -1; // Minimum value
-  const maxY = 1;  // Maximum value
+      for (let i = 0; i < byteArray.length; i += 40) { // 40 точек на интервал 25мс вместо 400
+        // Чтение 32-битных значений и нормализация
+        const sample = new Float32Array(byteArray.buffer, i, 1)[0];
+        amplitude.push(sample);
+      }
+
+      if (speechRange && Math.ceil(speechRange.timestamp) === Math.ceil(Date.now() / 1000)) {
+        setData(prevData => !prevData.slice(-120).includes('lineLeft') ? [...prevData.slice(1), 'lineLeft'] : prevData);
+        setSpeechRange(undefined);
+        setStep(Math.round(speechRange.length_samples / 400));
+      }
+
+      setData(prevData => {
+        const updatedData = [...prevData, ...amplitude];
+        if (updatedData.length > maxDataPoints) {
+            updatedData.splice(0, 40);
+        }
+        return updatedData;
+      });
+    });
+  }, [props.audioData, speechRange]);
 
   useEffect(() => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+    if (step === 0) {
+      setData(prevData => [...prevData.slice(1), 'lineRight']);
+      setStep(undefined);
+    }
+  }, [step]);
 
-      const width = canvas.width;
-      const height = canvas.height;
+  useEffect(() => {
+    setSpeechRange(props.speechRange)
+  }, [props.speechRange]);
 
-      ctx.clearRect(0, 0, width, height); // Clear the canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.clearRect(0, 0, width, height); // Clear the canvas
+    ctx.beginPath();
+    
+    const sliceWidth = width / maxDataPoints; // Width of each slice
+
+    data.forEach((value, index) => {
+      const x = index * sliceWidth; // Calculate x position from left
+      const y = (value + 1) * (height / 2); // Scale value to fit in canvas height
+      ctx.lineTo(x, y);
+    });
+
+    ctx.strokeStyle = '#3498db';
+    ctx.stroke();
+
+    drawVerticalLines(canvas, ctx);
+    //drawTextBox(canvas, ctx)
+    //drawXAxis(canvas, ctx);
+
+  }, [data, props.speechRange]);
+
+  function drawVerticalLines(canvas: any, ctx: any) {
+    if (!data) return
+    const indexes = data.map((dp, ind) => { if (dp === 'lineLeft' || dp === 'lineRight') return ind}).filter(x => !!x);
+    //console.log(indexes)
+    if (!indexes) return;
+    indexes.forEach(index => {
+      if (index && index !== -1) {
+        const x = (index * (canvas.width / maxDataPoints));
+        ctx.beginPath();
+        ctx.moveTo(x, 0); // Start from top of canvas
+        ctx.lineTo(x, canvas.height); // End at bottom of canvas
+        ctx.setLineDash([5, 5]); 
+        ctx.strokeStyle = 'red'; // Color for vertical lines
+        //ctx.lineWidth = 2; // Width of vertical lines
+        ctx.stroke();
+        ctx.setLineDash([]);
+        //ctx.closePath();
+      }
+    });
+  }
+
+  function drawTextBox(canvas: any, ctx: any) {
+    const indexes = data.map((dp, ind) => {
+      if (dp === 'lineLeft') {
+        return {ind: ind, pos: 'left'};
+      }
+      if (dp === 'lineRight') {
+        return {ind: ind, pos: 'right'};
+      }
+    }).filter(x => !!x);
+    if (!indexes) return;
+    indexes.forEach(index => {
+
+      if (!index) return;
+      const xStart = index.ind * canvas.width / maxDataPoints; // Starting X position for the text box
+      const xEnd = 250;   // Ending X position for the text box
+      const yPosition = 0; // Y position for the text box
+
+      const width = xEnd - xStart;
+      const height = 50;
       
+      // Draw rounded rectangle
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; // Background color with some transparency
       ctx.beginPath();
+      ctx.moveTo(xStart + 10, yPosition); // Move to start point with corner radius
+      ctx.lineTo(xEnd - 10, yPosition); 
+      ctx.quadraticCurveTo(xEnd, yPosition, xEnd, yPosition + 10); 
+      ctx.lineTo(xEnd, yPosition + height - 10);
+      ctx.quadraticCurveTo(xEnd, yPosition + height, xEnd - 10, yPosition + height);
+      ctx.lineTo(xStart + 10, yPosition + height);
+      ctx.quadraticCurveTo(xStart, yPosition + height, xStart, yPosition + height - 10);
+      ctx.lineTo(xStart, yPosition + 10);
+      ctx.quadraticCurveTo(xStart, yPosition, xStart + 10, yPosition);
+      ctx.closePath();
       
-      const sliceWidth = width / maxDataPoints; // Width of each slice
+      ctx.fill(); // Fill the rectangle
 
-      // Draw waveform from right to left
-      data.forEach((value, index) => {
-          const x = index * sliceWidth; // Calculate x position from left
-          const y = (value + 1) * (height / 2); // Scale value to fit in canvas height
-          //const y = ((value - minY) / (maxY - minY)) * height; 
-          ctx.lineTo(x, y);
-      });
+      // Draw text inside the rectangle
+      ctx.fillStyle = 'black'; // Text color
+      ctx.font = '20px Arial'; // Font style and size
+      ctx.textAlign = 'center'; 
+      ctx.fillText('Waveform Data', (xStart + xEnd) / 2, yPosition + height / 2 + 7); // Adjust Y position for centering text
+    });
+  }
 
-      ctx.strokeStyle = '#3498db';
+  function drawXAxis(canvas: any, ctx: any) {
+    const tickCount = maxDataPoints / 1600; // Number of ticks on the x-axis
+
+    for (let i: number = 0; i <= tickCount; i++) {
+      const x = (i * (canvas.width / tickCount)); // Calculate x position for each tick
+      
+      // Draw tick mark
+      ctx.beginPath();
+      ctx.moveTo(x + 2, canvas.height - 10); // Start at bottom of canvas for tick mark
+      ctx.lineTo(x+ 2, canvas.height);       // Tick mark length is 10 pixels
+      ctx.strokeStyle = 'black';          // Color of tick marks
+      //ctx.lineWidth = 2;
       ctx.stroke();
-      //ctx.scale(1.5, 1.5);
 
-  }, [data]);
+      // Draw labels below each tick mark
+      
+      if (i <= tickCount) { 
+          const labelValue = i * (maxDataPoints / tickCount / 1600); 
+          ctx.fillStyle = 'black'; 
+          ctx.font = '12px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(labelValue.toFixed(1), x, canvas.height - 15); // Position label slightly below tick mark
+      }
+      
+    }
 
-  return <canvas ref={canvasRef} width={600} height={300} />;
+    // Draw signature below the x-axis centered on the canvas width.
+    //ctx.fillStyle = 'black';
+    //ctx.font = '16px Arial';
+    //ctx.textAlign = 'center';
+    //ctx.fillText('Time (arbitrary units)', canvas.width / 2, canvas.height - 30); 
+  }
+
+  return <canvas ref={canvasRef} width={1500} height={300} />;
 };
 
 
