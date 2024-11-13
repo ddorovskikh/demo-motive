@@ -10,6 +10,7 @@ interface ICategoryItem {
 interface ITopMenuProps {
   items?: ICategoryItem[],
   onClassClick?: any,
+  setClassId?: any;
 }
 
 const TopMenu: FC<ITopMenuProps> = (props) => {
@@ -24,6 +25,7 @@ const TopMenu: FC<ITopMenuProps> = (props) => {
           icon={item.icon}
           id={item.id}
           onClassChoose={props.onClassClick}
+          setClassId={props.setClassId}
         />
       )}
       </div>

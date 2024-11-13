@@ -34,11 +34,11 @@ export default function App() {
 
   const { lastMessage: audioData } = useWebSocket<any>(socketUrlAudio, { share: true });
   
-  const { readyState: readyStateSpeechInfoVAD, lastMessage: SpeechInfoVAD } =
-    useWebSocket<any>(socketUrlSpeechInfoVAD, { share: true });
+  const { lastMessage: SpeechInfoVAD } = useWebSocket<any>(socketUrlSpeechInfoVAD, { share: true });
 
   const [categorySelected, setCategorySelected] = useState<string>('tick');
   const [classInfo, setClassInfo] = useState<any>();
+  const [classId, setClassId] = useState<string>('');
   const [gpuPowerData, setGpuPowerData] = useState<IGpuInfo[]>([]);
   const referedStateGpuPower = useRef(ReadyState.CONNECTING);
   //const referedStateAudio = useRef(ReadyState.CONNECTING);
@@ -74,10 +74,10 @@ export default function App() {
         <LeftMenu onSelectedCategoryChange={setCategorySelected}/>
         <div className='flex flex-col ml-card mt-12 gap-6'>
           <span className='title'> Подкатегория </span>
-          <TopMenu items={topMenuItems[categorySelected]} onClassClick={setClassInfo}/>
+          <TopMenu items={topMenuItems[categorySelected]} onClassClick={setClassInfo} setClassId={setClassId}/>
           <div className='rounded-3xl pt-6 pl-12 pb-1 pr-6 bg-white shadow-lg min-w-max mr-6'>
               
-            <AudioChart audioData={audioData} speechRange={classInfo} />
+            <AudioChart audioData={audioData} speechRange={classInfo} vadInfo={SpeechInfoVAD?.data} classId={classId} />
 
             {/*<div className='align-bottom text-center mt-6'>
               <span className='text '> Время, с </span>

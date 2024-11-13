@@ -5,10 +5,12 @@ interface ITopMenuButton {
   label?: string,
   id?: string,
   onClassChoose?: any,
+  setClassId?: any;
 }
 
 const TopMenuButton: FC<ITopMenuButton> = (props) => {
   const clickHandler = async () => {
+    props.setClassId(props.id);
     try {
       const classResponse = await fetch('http://127.0.0.1:8008/play_command', {
         method: 'POST',

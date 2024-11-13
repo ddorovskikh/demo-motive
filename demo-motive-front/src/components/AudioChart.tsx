@@ -1,61 +1,86 @@
-import { useEffect, useId, useMemo, useRef, useState, startTransition } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, startTransition } from 'react';
+
+const THIN_POINT = 40; // 40
+const POINT_IN_SAMPLE = 40;
+const TIME_INTERVAL_MS = 25;
 
 const AudioChart: React.FC<any> = (props) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [data, setData] = useState<any[]>([]);
   const maxDataPoints = 19200; // Total number of points (12 seconds at 25ms intervals)
-  const [speechRange, setSpeechRange] = useState<any>();
-  const [countSamples, setCountSamples] = useState<number>(0);
-  const [lenSamplesToNextLine, setLenSamplesToNextLine] = useState<any>();
-  const [step, setStep] = useState<any>();
 
-  var count = 0;
-  var check: any = null;
+
+  useEffect(() => {
+    if (!props.vadInfo) return;
+    //console.log(JSON.parse(props.vadInfo));
+  }, [props.vadInfo]);
 
   useEffect(() => {
     if (props.audioData === null) return;
 
     const amplitude: any[] = [];
 
-    if (typeof step === 'number') {
-      setStep((prev: any) => prev - 1);
-    }
-    
     props.audioData.data.arrayBuffer().then((dataAudio: any) => {
       const byteArray = new Uint8Array(dataAudio);
 
-      for (let i = 0; i < byteArray.length; i += 40) { // 40 точек на интервал 25мс вместо 400
+      for (let i = 0; i < byteArray.length; i += THIN_POINT) { // 40 точек на интервал 25мс вместо 400
         // Чтение 32-битных значений и нормализация
         const sample = new Float32Array(byteArray.buffer, i, 1)[0];
         amplitude.push(sample);
       }
 
-      if (speechRange && Math.ceil(speechRange.timestamp) === Math.ceil(Date.now() / 1000)) {
-        setData(prevData => !prevData.slice(-120).includes('lineLeft') ? [...prevData.slice(1), 'lineLeft'] : prevData);
-        setSpeechRange(undefined);
-        setStep(Math.round(speechRange.length_samples / 400));
-      }
-
       setData(prevData => {
         const updatedData = [...prevData, ...amplitude];
         if (updatedData.length > maxDataPoints) {
-            updatedData.splice(0, 40);
+            updatedData.splice(0, THIN_POINT);
         }
         return updatedData;
       });
     });
-  }, [props.audioData, speechRange]);
-
-  useEffect(() => {
-    if (step === 0) {
-      setData(prevData => [...prevData.slice(1), 'lineRight']);
-      setStep(undefined);
+    if (indexesTrue.length) {
+      const newIndexes = indexesTrue.map((ind: any) => ind - THIN_POINT > 0 ? ind - THIN_POINT : undefined).filter((x: any) => !!x);
+      setIndexesTrue(newIndexes);
     }
-  }, [step]);
+    if (indexesCenterTrueClass.length) {
+      const newIndexesClass = indexesCenterTrueClass.map((item: any) => item.ind - THIN_POINT > 0 ? {ind: item.ind-THIN_POINT, class: item.class} : undefined).filter((x: any) => !!x);
+      setIndexesCenterTrueClass(newIndexesClass);
+    }
+    if (indexesVad.length) {
+      const newIndexesVad = indexesVad.map((ind: any) => ind - THIN_POINT > 0 ? ind - THIN_POINT : undefined).filter((x: any) => !!x);
+      setIndexesVad(newIndexesVad);
+    }
+  }, [props.audioData]);
+
+  const [indexesTrue, setIndexesTrue] = useState<any>([]);
+  const [timeGetTrueSpeech, setTimeGetTrueSpeech] = useState<any>();
+  const [indexesCenterTrueClass, setIndexesCenterTrueClass] = useState<any>([]);
 
   useEffect(() => {
-    setSpeechRange(props.speechRange)
-  }, [props.speechRange]);
+    if (!props.classId) return;
+    if (props.speechRange) {
+      const ind = Math.ceil(props.speechRange.timestamp * 1000 * (maxDataPoints-1) / Date.now()); // ms / ms -> index
+      setTimeGetTrueSpeech(Date.now());
+      const step = Math.ceil(props.speechRange.length_samples / 10); // number of points after ind
+      setIndexesTrue((prevValue: any) => [...prevValue, ind, ind + step]);
+      setIndexesCenterTrueClass((prevValue: any) => [...prevValue, { ind: Math.ceil((2*ind + step)/2), class: props.classId }]); //class
+    }
+
+  }, [props.speechRange, props.classId]);
+
+  const [indexesVad, setIndexesVad] = useState<any>([]);
+
+  useEffect(() => {
+    if (props.vadInfo) {
+      const vadInfo = JSON.parse(props.vadInfo);
+      const ind = Math.ceil(vadInfo.vad_timestamp * 1000 * (maxDataPoints-1) / (Date.now()));
+      const lagTimeMS = Date.now() - timeGetTrueSpeech;
+      const lagInd = lagTimeMS ? lagTimeMS / TIME_INTERVAL_MS * POINT_IN_SAMPLE : 0;
+      const step = Math.ceil(vadInfo.vad_length_in_samples) * POINT_IN_SAMPLE;
+      setIndexesVad((prevValue: any) => [...prevValue, ind - lagInd, ind + step - lagInd]);
+      setTimeGetTrueSpeech(undefined);
+    }
+
+  }, [props.vadInfo]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -80,76 +105,52 @@ const AudioChart: React.FC<any> = (props) => {
     ctx.strokeStyle = '#3498db';
     ctx.stroke();
 
-    drawVerticalLines(canvas, ctx);
-    //drawTextBox(canvas, ctx)
+    drawVerticalLines(canvas, ctx, indexesTrue, 'pink', false, indexesCenterTrueClass);
+    drawVerticalLines(canvas, ctx, indexesVad, 'green', true);
+    drawTextBox(canvas, ctx, indexesCenterTrueClass);
     //drawXAxis(canvas, ctx);
 
-  }, [data, props.speechRange]);
+  }, [data, props.speechRange, props.vadInfo]);
 
-  function drawVerticalLines(canvas: any, ctx: any) {
-    if (!data) return
-    const indexes = data.map((dp, ind) => { if (dp === 'lineLeft' || dp === 'lineRight') return ind}).filter(x => !!x);
-    //console.log(indexes)
-    if (!indexes) return;
-    indexes.forEach(index => {
-      if (index && index !== -1) {
+  const drawVerticalLines = (canvas: any, ctx: any, indexes: any, color: string, dashed: boolean = false, centerIndClass?: any) => {
+    if (!data || !indexes.length) return;
+    indexes.forEach((index: any) => {
+      if (index && index < maxDataPoints) {
         const x = (index * (canvas.width / maxDataPoints));
         ctx.beginPath();
         ctx.moveTo(x, 0); // Start from top of canvas
         ctx.lineTo(x, canvas.height); // End at bottom of canvas
-        ctx.setLineDash([5, 5]); 
-        ctx.strokeStyle = 'red'; // Color for vertical lines
+        dashed && ctx.setLineDash([5, 8]);
+        ctx.strokeStyle = color; // Color for vertical lines
         //ctx.lineWidth = 2; // Width of vertical lines
         ctx.stroke();
-        ctx.setLineDash([]);
+        dashed && ctx.setLineDash([]);
         //ctx.closePath();
       }
     });
   }
 
-  function drawTextBox(canvas: any, ctx: any) {
-    const indexes = data.map((dp, ind) => {
-      if (dp === 'lineLeft') {
-        return {ind: ind, pos: 'left'};
+  const drawTextBox = useCallback((canvas: any, ctx: any, centerIndClass: any) => {
+    if (!centerIndClass.length) return;
+    const padding = 10;
+    //const rectY = canvas.height;
+    centerIndClass.forEach((item: any) => {
+      if (item.ind < maxDataPoints) {
+        const textWidth = ctx.measureText(item.class).width;
+        const rectWidth = textWidth + padding * 2;
+        const rectX = item.ind*(canvas.width / maxDataPoints) - rectWidth/2;
+        ctx.font = '20px Arial';
+
+        const rectHeight = parseInt(ctx.font, 15);
+        const rectY = canvas.height - rectHeight  ;
+        ctx.fillStyle = 'lightblue';
+        ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+
+        ctx.fillStyle = 'black';
+        ctx.fillText(item.class, rectX + padding, rectY + rectHeight - padding);
       }
-      if (dp === 'lineRight') {
-        return {ind: ind, pos: 'right'};
-      }
-    }).filter(x => !!x);
-    if (!indexes) return;
-    indexes.forEach(index => {
-
-      if (!index) return;
-      const xStart = index.ind * canvas.width / maxDataPoints; // Starting X position for the text box
-      const xEnd = 250;   // Ending X position for the text box
-      const yPosition = 0; // Y position for the text box
-
-      const width = xEnd - xStart;
-      const height = 50;
-      
-      // Draw rounded rectangle
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; // Background color with some transparency
-      ctx.beginPath();
-      ctx.moveTo(xStart + 10, yPosition); // Move to start point with corner radius
-      ctx.lineTo(xEnd - 10, yPosition); 
-      ctx.quadraticCurveTo(xEnd, yPosition, xEnd, yPosition + 10); 
-      ctx.lineTo(xEnd, yPosition + height - 10);
-      ctx.quadraticCurveTo(xEnd, yPosition + height, xEnd - 10, yPosition + height);
-      ctx.lineTo(xStart + 10, yPosition + height);
-      ctx.quadraticCurveTo(xStart, yPosition + height, xStart, yPosition + height - 10);
-      ctx.lineTo(xStart, yPosition + 10);
-      ctx.quadraticCurveTo(xStart, yPosition, xStart + 10, yPosition);
-      ctx.closePath();
-      
-      ctx.fill(); // Fill the rectangle
-
-      // Draw text inside the rectangle
-      ctx.fillStyle = 'black'; // Text color
-      ctx.font = '20px Arial'; // Font style and size
-      ctx.textAlign = 'center'; 
-      ctx.fillText('Waveform Data', (xStart + xEnd) / 2, yPosition + height / 2 + 7); // Adjust Y position for centering text
     });
-  }
+  }, [indexesCenterTrueClass]);
 
   function drawXAxis(canvas: any, ctx: any) {
     const tickCount = maxDataPoints / 1600; // Number of ticks on the x-axis
@@ -184,7 +185,7 @@ const AudioChart: React.FC<any> = (props) => {
     //ctx.fillText('Time (arbitrary units)', canvas.width / 2, canvas.height - 30); 
   }
 
-  return <canvas ref={canvasRef} width={1500} height={300} />;
+  return <canvas ref={canvasRef} width={1000} height={300} />;
 };
 
 
