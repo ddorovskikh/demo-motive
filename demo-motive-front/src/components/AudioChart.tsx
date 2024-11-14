@@ -1,19 +1,17 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, startTransition } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-const THIN_POINT = 40; // 40
+const THIN_POINT = 40;
 const POINT_IN_SAMPLE = 40;
 const TIME_INTERVAL_MS = 25;
+
+const CHART_WIDTH = 1000;
+const CHART_HEIGHT = 300;
 
 const AudioChart: React.FC<any> = (props) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [data, setData] = useState<any[]>([]);
   const maxDataPoints = 19200; // Total number of points (12 seconds at 25ms intervals)
 
-
-  useEffect(() => {
-    if (!props.vadInfo) return;
-    //console.log(JSON.parse(props.vadInfo));
-  }, [props.vadInfo]);
 
   useEffect(() => {
     if (props.audioData === null) return;
@@ -23,8 +21,7 @@ const AudioChart: React.FC<any> = (props) => {
     props.audioData.data.arrayBuffer().then((dataAudio: any) => {
       const byteArray = new Uint8Array(dataAudio);
 
-      for (let i = 0; i < byteArray.length; i += THIN_POINT) { // 40 точек на интервал 25мс вместо 400
-        // Чтение 32-битных значений и нормализация
+      for (let i = 0; i < byteArray.length; i += THIN_POINT) { // 40 points for each 25ms interval
         const sample = new Float32Array(byteArray.buffer, i, 1)[0];
         amplitude.push(sample);
       }
@@ -37,6 +34,7 @@ const AudioChart: React.FC<any> = (props) => {
         return updatedData;
       });
     });
+
     if (indexesTrue.length) {
       const newIndexes = indexesTrue.map((ind: any) => ind - THIN_POINT > 0 ? ind - THIN_POINT : undefined).filter((x: any) => !!x);
       setIndexesTrue(newIndexes);
@@ -58,7 +56,7 @@ const AudioChart: React.FC<any> = (props) => {
   useEffect(() => {
     if (!props.classId) return;
     if (props.speechRange) {
-      const ind = Math.ceil(props.speechRange.timestamp * 1000 * (maxDataPoints-1) / Date.now()); // ms / ms -> index
+      const ind = Math.ceil(props.speechRange.timestamp * 1000 * (maxDataPoints-1) / Date.now());
       setTimeGetTrueSpeech(Date.now());
       const step = Math.ceil(props.speechRange.length_samples / 10); // number of points after ind
       setIndexesTrue((prevValue: any) => [...prevValue, ind, ind + step]);
@@ -118,8 +116,8 @@ const AudioChart: React.FC<any> = (props) => {
       if (index && index < maxDataPoints) {
         const x = (index * (canvas.width / maxDataPoints));
         ctx.beginPath();
-        ctx.moveTo(x, 0); // Start from top of canvas
-        ctx.lineTo(x, canvas.height); // End at bottom of canvas
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
         dashed && ctx.setLineDash([5, 8]);
         ctx.strokeStyle = color; // Color for vertical lines
         //ctx.lineWidth = 2; // Width of vertical lines
@@ -133,7 +131,7 @@ const AudioChart: React.FC<any> = (props) => {
   const drawTextBox = useCallback((canvas: any, ctx: any, centerIndClass: any) => {
     if (!centerIndClass.length) return;
     const padding = 10;
-    //const rectY = canvas.height;
+
     centerIndClass.forEach((item: any) => {
       if (item.ind < maxDataPoints) {
         const textWidth = ctx.measureText(item.class).width;
@@ -185,7 +183,7 @@ const AudioChart: React.FC<any> = (props) => {
     //ctx.fillText('Time (arbitrary units)', canvas.width / 2, canvas.height - 30); 
   }
 
-  return <canvas ref={canvasRef} width={1000} height={300} />;
+  return <canvas ref={canvasRef} width={CHART_WIDTH} height={CHART_HEIGHT} />;
 };
 
 

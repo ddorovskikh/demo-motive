@@ -1,0 +1,2 @@
+[INFO:[2024-11-14 16:45:02,961]:lifespan]: Starting stream
+[WARNING:[2024-11-14 16:48:42,263]:websocket_endpoint_1]: data_stream socket is closed

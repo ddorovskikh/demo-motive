@@ -1,7 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
-from .powerdata_gpu import Worker_power
+# from .powerdata_gpu import Worker_power
 
 from subprocess import Popen, PIPE
 from xml.etree.ElementTree import fromstring
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
 import asyncio
-import datetime
+from datetime import datetime, time
 
 from starlette.websockets import WebSocketClose
 from websockets.exceptions import ConnectionClosedError
@@ -21,8 +21,63 @@ import json
 import pynvml
 
 import websockets
+from contextlib import asynccontextmanager
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import logging
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+log_handler = logging.FileHandler(f"logs/{datetime.now().strftime('%Y-%m-%d %H%M%S')}.log")
+log_handler.setFormatter(logging.Formatter("[%(levelname)s:[%(asctime)s]:%(funcName)s]: %(message)s"))
+log.addHandler(log_handler)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log.info("Starting stream")
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(stream_to_frontend, "interval", seconds=0.025, max_instances=1)
+    scheduler.start()
+    yield
 
 
+app = FastAPI(lifespan=lifespan)
+
+websocket_stream = None
+
+async def stream_to_frontend():
+    if websocket_stream is None:
+        return
+    chunk = np.random.random(CHUNK_SIZE) * 0.01 - 0.005
+    print(get_gpu_info_2())
+    powerArray = [get_gpu_info_2()[0]]
+    await websocket_stream.send_bytes(chunk.astype(np.float32).tobytes())
+
+@app.websocket("/data_stream")
+async def websocket_endpoint_1(websocket: WebSocket):
+    global websocket_stream
+    await websocket.accept()
+    websocket_stream = websocket
+    try:
+        while True:
+            print('yes')
+            await websocket.receive_text()
+            #await asyncio.sleep(0.01)
+    except:
+        log.warning("gpu_data_stream socket is closed")
+        websocket_stream = None
+
+
+def get_gpu_info_2():
+    device_count = pynvml.nvmlDeviceGetCount()
+    datas = []
+    for i in range(device_count):
+        # gpu_data = {}
+        handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+        power_in_mW = pynvml.nvmlDeviceGetPowerUsage(handle)
+        # gpu_data["power"] = power_in_mW
+        datas.append(power_in_mW)
+    return datas
+'''
 app = FastAPI()
 
 origins = [
@@ -67,11 +122,11 @@ def get_gpu_info_2():
     device_count = pynvml.nvmlDeviceGetCount()
     datas = []
     for i in range(device_count):
-        gpu_data = {}
+        # gpu_data = {}
         handle = pynvml.nvmlDeviceGetHandleByIndex(i)
         power_in_mW = pynvml.nvmlDeviceGetPowerUsage(handle)
-        gpu_data["power"] = power_in_mW
-        datas.append(gpu_data)
+        # gpu_data["power"] = power_in_mW
+        datas.append(power_in_mW)
     return datas
 
 def get_power():
@@ -98,79 +153,8 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
                 power = get_gpu_info()[0]['power'].replace(" W","")
                 try:
                     await websocket.send_json({'power': float(power), 'time': seconds})
-                    await asyncio.sleep(0.01)
+                    await asyncio.sleep(0.025)
                 except ConnectionClosedError:
                     print("Client disconnected.")
                     break
-        case 'audio':
-            while True:
-                chunk = np.random.random(CHUNK_SIZE) * 0.01 - 0.005
-                #print(chunk)
-                if current_audio_command and current_audio_command.is_playing:
-                    command_chunk = current_audio_command.audio_data[current_audio_command.shift:current_audio_command.shift + CHUNK_SIZE]
-                    current_audio_command.shift += CHUNK_SIZE
-                    if current_audio_command.shift >= current_audio_command.length_samples - 1:
-                        current_audio_command.is_playing = False
-                    chunk[:len(command_chunk)] += command_chunk
-                    chunk = np.clip(chunk, -1, 1)
-                await websocket.send(chunk.astype(np.float32).tobytes())
-                await asyncio.sleep(CHUNK_DURATION)
-
-
 '''
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    #wp = Worker_power()
-    while True:
-        #data = await websocket.receive_text()
-        #data = wp.p_data
-        #await websocket.send_text(f"Message text was: {data}")
-        power = get_gpu_info()[0]['power']
-        await websocket.send_text(f"Message text was: {get_gpu_info()[0]}")
-'''
-
-'''
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    #wp = Worker_power()
-    while True:
-        power = get_gpu_info()[0]['power']
-        print(get_gpu_info())
-        print(power)
-        await websocket.send_text(f"Message text was: ")
-        #await websocket.send_text(f"Power: {wp.p_data}")
-        #await websocket.send(json.stringify(get_gpu_info()[0]))
-        #await websocket.send_text(get_gpu_info()[0].power);
-        #data = 'xcvbxnvb'
-        #await websocket.send_text(f"Message text was: {data}")
-'''
-
-COMMANDS_CLASSES = ["yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go",
-                    "backward", "forward", "follow", "learn", "visual",
-                    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-                    "create", "cry", "over", "discord", "harm", "dies", "nails", "rustier",
-                    "exclude", "motto", "grief", "newer", "knock", "blow off"]
-
-@app.post("/play_command")
-async def play_command(class_data: dict) -> dict:
-    class_id = class_data['class_id']
-    #command_playing_class = COMMANDS_CLASSES[class_id]
-    print(class_id)
-    '''
-    command_audio_file = random.choice(os.listdir(SOUNDS_DIR / command_playing_class))
-    try:
-        command_audio_data, _ = librosa.load(SOUNDS_DIR / command_playing_class / command_audio_file, sr=SAMPLE_RATE)
-    except:
-        raise HTTPException(status_code=400, detail="Wrong audio class")
-    current_audio_command = CurrentAudioCommand(timestamp=datetime.timestamp(datetime.now()),
-                                                is_playing=True,
-                                                file_path=SOUNDS_DIR / command_playing_class / command_audio_file,
-                                                audio_data=command_audio_data,
-                                                length_samples=len(command_audio_data))
-    '''
-    return {
-        "timestamp": str(datetime.datetime.now().time()),
-        "length_samples": 5,
-    }
