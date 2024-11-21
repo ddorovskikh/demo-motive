@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 
-
 const CHART_WIDTH = 1030;
 const CHART_HEIGHT = 150;
 const MAX_DATA_POINTS = 120;
 const LINE_COLOR = '#00000075';
+const ALTAI_COLOR = '#46CDED';
 const Y_TICK_COUNT = 3;
 
-const GpuPowerChart: React.FC<any> = (props) => {
+const AltaiPowerChart: React.FC<any> = (props) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
-    if (props.gpuData === null) return;
+    if (!props.altaiData) return;
 
     const chunk: any[] = [];
 
-    props.gpuData.data.arrayBuffer().then((data: any) => {
+    // get altai power data in bytes
+    props.altaiData.data.arrayBuffer().then((data: any) => {
       const byteArray = new Uint8Array(data);
 
       for (let i = 0; i < byteArray.length; i += 4) {
@@ -33,7 +34,7 @@ const GpuPowerChart: React.FC<any> = (props) => {
       });
     });
 
-  }, [props.gpuData]);
+  }, [props.altaiData]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -57,13 +58,11 @@ const GpuPowerChart: React.FC<any> = (props) => {
       ctx.lineTo(x, y);
     });
 
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = ALTAI_COLOR;
     ctx.stroke();
 
     drawYAxis(canvas, ctx, maxDataValue);
-    //ctx.lineWidth = 3;
     drawXAxis(canvas, ctx);
-    //ctx.lineWidth = 1.5;
 
   }, [data]);
 
@@ -71,8 +70,8 @@ const GpuPowerChart: React.FC<any> = (props) => {
 
     // Draw Y-axis
     ctx.beginPath();
-    ctx.moveTo(50, 9);
-    ctx.lineTo(50, canvas.height);
+    ctx.moveTo(50, 0);
+    ctx.lineTo(50, canvas.height-5);
     ctx.strokeStyle = LINE_COLOR;
     ctx.stroke();
 
@@ -92,7 +91,6 @@ const GpuPowerChart: React.FC<any> = (props) => {
       ctx.lineTo(50, yPos);
       ctx.stroke();
     }
-    drawArrow(ctx, 50, 10, 50, 0);
   }
 
   const drawXAxis = (canvas: any, ctx: any) => {
@@ -120,10 +118,9 @@ const GpuPowerChart: React.FC<any> = (props) => {
     ctx.lineTo(toX, toY);
     ctx.fillStyle = LINE_COLOR;
     ctx.fill();
-    //ctx.fillStyle = 'black';
   };
 
   return <canvas ref={canvasRef} width={CHART_WIDTH} height={CHART_HEIGHT} />;
 }
 
-export default GpuPowerChart;
+export default AltaiPowerChart;
