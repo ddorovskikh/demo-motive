@@ -1,0 +1,1 @@
+uvicorn gpu_power_generator:app --port 8007 --lifespan=on

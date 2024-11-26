@@ -1,0 +1,25 @@
+[INFO:[2024-11-21 16:42:09,262]:lifespan]: Starting stream
+[WARNING:[2024-11-21 16:50:00,342]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 16:52:46,634]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 16:53:05,114]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 16:53:17,538]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 16:53:21,206]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:11:34,602]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:15:29,691]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:15:31,536]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:15:50,563]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:19:29,798]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:21:38,083]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:22:18,263]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:22:38,308]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:23:16,412]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:24:08,215]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:26:22,605]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:34:58,530]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:36:53,101]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:45:14,286]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:45:26,834]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:46:19,695]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:46:21,546]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:46:45,958]:websocket_endpoint_1]: data_stream socket is closed
+[WARNING:[2024-11-21 17:49:51,605]:websocket_endpoint_1]: data_stream socket is closed
